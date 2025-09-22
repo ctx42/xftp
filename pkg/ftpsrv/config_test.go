@@ -18,6 +18,17 @@ func Test_WithHost(t *testing.T) {
 	assert.Equal(t, "host", have.host)
 }
 
+func Test_WithPort(t *testing.T) {
+	// --- Given ---
+	cfg := Config{}
+
+	// --- When ---
+	have := WithPort(2121)(cfg)
+
+	// --- Then ---
+	assert.Equal(t, 2121, have.port)
+}
+
 func Test_WithClock(t *testing.T) {
 	// --- Given ---
 	want := time.Now
@@ -76,6 +87,7 @@ func Test_NewConfig(t *testing.T) {
 
 		// --- Then ---
 		assert.Equal(t, "127.0.0.1", cfg.host)
+		assert.Equal(t, 21, cfg.port)
 		assert.Duration(t, "150ms", cfg.readTO)
 		assert.Duration(t, "50ms", cfg.writeTO)
 		assert.NotNil(t, cfg.clock)
@@ -85,7 +97,7 @@ func Test_NewConfig(t *testing.T) {
 		assert.Nil(t, cfg.cert)
 		assert.Nil(t, cfg.key)
 
-		assert.Fields(t, 9, Config{}) // Update the above assertions on fail.
+		assert.Fields(t, 10, Config{}) // Update the above assertions on fail.
 	})
 
 	t.Run("with option", func(t *testing.T) {

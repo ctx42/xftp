@@ -15,6 +15,14 @@ func WithHost(host string) Option {
 	}
 }
 
+// WithPort is the [NewConfig] option setting the port to listen on.
+func WithPort(port int) Option {
+	return func(cfg Config) Config {
+		cfg.port = port
+		return cfg
+	}
+}
+
 // WithClock is the [NewConfig] option setting clock to use.
 func WithClock(clk func() time.Time) Option {
 	return func(cfg Config) Config {
@@ -50,6 +58,7 @@ func WithReadyMsg(rsp Response) Option {
 // Config represents FTP server configuration.
 type Config struct {
 	host        string           // FTP listening address.
+	port        int              // FTP listening port.
 	readTO      time.Duration    // Connection read timeout.
 	writeTO     time.Duration    // Connection write timeout.
 	clock       func() time.Time // Current time and timezone.
@@ -65,6 +74,7 @@ type Config struct {
 func NewConfig(opts ...Option) Config {
 	cfg := Config{
 		host:        "127.0.0.1",
+		port:        21,
 		readTO:      150 * time.Millisecond,
 		writeTO:     50 * time.Millisecond,
 		clock:       func() time.Time { return time.Now().UTC() },
