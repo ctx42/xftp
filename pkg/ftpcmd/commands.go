@@ -90,7 +90,7 @@ var RFC959 = []string{
 }
 
 // Minimal is a list of FTP commands that must be in a minimal FTP server
-// implementation according to [RFC 959].
+// implementation, according to [RFC 959].
 //
 // [RFC 959]: https://datatracker.ietf.org/doc/html/rfc959
 var Minimal = []string{
