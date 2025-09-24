@@ -58,7 +58,7 @@ func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 		if err = srv.handleAcceptError(err); err != nil {
 			return err
 		}
-		cc := NewSession(srv.cfg, conn).WithTLS(srv.tlsCfg)
+		cc := NewCtrlCon(srv.cfg, conn).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}
 }
