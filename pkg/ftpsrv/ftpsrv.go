@@ -4,8 +4,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-// Session represents an FTP session.
-type Session interface {
+// ISession represents an FTP session.
+type ISession interface {
 	// ID returns unique UUIDv7 FTP Session ID.
 	ID() uuid.UUID
 }
@@ -19,5 +19,5 @@ type Feature interface {
 	RequireAuth() bool
 
 	// Execute executes the feature within the given FTP session.
-	Execute(ses Session, args ...string)
+	Execute(ses ISession, args ...string)
 }
