@@ -8,9 +8,11 @@ import (
 	"net"
 	"net/textproto"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // ErrQuit is returned by "QUIT" FTP command handler.
@@ -18,20 +20,27 @@ var ErrQuit = errors.New("connection closing after QUIT command")
 
 // CtrlCon represents FTP control connection.
 type CtrlCon struct {
-	ses    *Session
-	tslCfg *tls.Config
-	conn   net.Conn
-	proto  *textproto.Conn // Connection wrapped in text protocol.
-	log    zerolog.Logger
+	ses       *Session
+	tslCfg    *tls.Config
+	conn      net.Conn
+	proto     *textproto.Conn // Connection wrapped in text protocol.
+	log       zerolog.Logger
+	quitCh    chan struct{} // When closed forces connection to be closed.
+	quitFn    func()        // Called to close control channel.
+	listening bool          // The listener goroutine is listening.
+	mx        sync.RWMutex  // Guards struct fields.
 }
 
 // NewCtrlCon returns a new instance of [CtrlCon].
 func NewCtrlCon(ses *Session, conn net.Conn, log zerolog.Logger) *CtrlCon {
+	quitCh := make(chan struct{}, 1)
 	return &CtrlCon{
-		ses:   ses,
-		conn:  conn,
-		proto: textproto.NewConn(conn),
-		log:   log,
+		ses:    ses,
+		conn:   conn,
+		proto:  textproto.NewConn(conn),
+		log:    log,
+		quitCh: quitCh,
+		quitFn: sync.OnceFunc(func() { close(quitCh) }),
 	}
 }
 
@@ -43,36 +52,55 @@ func (cc *CtrlCon) WithTLS(tlsCfg *tls.Config) *CtrlCon {
 
 // Listen starts listening for control commands from the client.
 func (cc *CtrlCon) Listen() *CtrlCon {
+	cc.mx.Lock()
+	defer cc.mx.Unlock()
+	if cc.listening {
+		return cc
+	}
 	started := make(chan struct{})
 	go cc.listen(started)
-	<-started
+	<-started // Return only when the goroutine has started.
+	cc.listening = true
 	return cc
 }
 
+// listen starts listening for commands. It should be listening in goroutine.
+// Closes the listening channel once it starts.
 func (cc *CtrlCon) listen(started chan struct{}) {
+	defer func() {
+		LogError(nil, cc.log, cc.close(), nil)
+		cc.log.Debug().Msg("cc.listen: exiting")
+	}()
+	log.Debug().Msg("cc.listen: started")
 	close(started)
 
-	log := cc.log
 	if err := cc.writeLine(cc.ses.Cfg.svrReadyMsg); err != nil {
 		log.Error().Err(err).Send()
 	}
 
 	for {
+		select {
+		case <-cc.quitCh:
+			log.Debug().Msg("cc.listen: quitting")
+			return
+		default:
+		}
+
 		_ = cc.conn.SetReadDeadline(time.Now().Add(cc.ses.Cfg.readTO))
 		line, err := cc.proto.ReadLine()
 		if err != nil {
 			var e *net.OpError
 			if errors.As(err, &e) && e.Timeout() {
-				log.Debug().Msg("cc.listen: read timeout")
+				log.Debug().Msgf("cc.listen: read timeout")
 				continue
 			}
 
 			switch {
 			case strings.Contains(err.Error(), "connection reset by peer"):
-				log.Debug().Msg("cc.listen: connection reset by peer")
+				log.Debug().Msgf("cc.listen: connection reset by peer")
 
 			case errors.Is(err, io.EOF):
-				log.Debug().Msg("cc.listen: closed by the client")
+				log.Debug().Msgf("cc.listen: closed by client")
 			}
 			return
 		}
@@ -80,13 +108,16 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 
 		cmd, args := SplitCmdLine(line)
 		cmd = strings.ToUpper(cmd)
+		cc.mx.Lock()
 		if err = cc.handleCommand(cmd, args...); err != nil {
 			if errors.Is(err, ErrQuit) {
+				cc.mx.Unlock()
 				return
 			}
 			log.Error().Err(err).Send()
-			log.Debug().Msg("cc.listen: handler error")
+			log.Debug().Msgf("cc.listen: handler error")
 		}
+		cc.mx.Unlock()
 	}
 }
 
@@ -109,4 +140,26 @@ func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
 
 func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 	return cc.writeLine(ErrorUnkCmd, cmd)
+}
+
+// Close closes control connection and data connection if it exists and stops
+// listening for control commands. No message is sent to the client.
+func (cc *CtrlCon) Close() error {
+	cc.quitFn()
+	return nil
+}
+
+// Close closes control connection and data connection if it exists and stops
+// listening for control commands. No message is sent to the client.
+func (cc *CtrlCon) close() error {
+	cc.mx.Lock()
+	defer cc.mx.Unlock()
+	if !cc.listening {
+		return nil
+	}
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.Cfg.writeTO))
+	meta := map[string]any{"action": "cc.close"}
+	LogError(nil, cc.log, cc.proto.Close(), meta)
+	log.Debug().Msgf("cc.Close")
+	return nil
 }

@@ -1,28 +1,31 @@
 package ftpsrv_test
 
 import (
-	"fmt"
 	"testing"
-	"time"
+
+	"github.com/ctx42/testing/pkg/assert"
 
 	"github.com/ctx42/xftp/pkg/ftpsrv/ftpsrvtest"
 
 	. "github.com/ctx42/xftp/pkg/ftpsrv"
 )
 
-func Test_Name(t *testing.T) {
-	// --- Given ---
-	tlog, zlog := TstLogger(t)
+func Test_CtrlCon_Listen(t *testing.T) {
+	t.Run("starts and sends a server ready message", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.TstSession()
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		t.Cleanup(func() { t.Helper(); assert.NoError(t, cc.Close()) })
 
-	tst := ftpsrvtest.NewTester(t).WireUp()
-	ses := tst.TstSession()
+		// --- When ---
+		cc.Listen()
 
-	cc := NewCtrlCon(ses, tst.SrvCon(), zlog).Listen()
+		// --- Then ---
+		tst.Reply(ServerReady.String())
 
-	// --- When ---
-	_ = cc
-
-	// --- Then ---
-	time.Sleep(1 * time.Second)
-	fmt.Println(tlog.String()) // TODO():
+		tlog := tst.ExamineLog()
+		tlog.WaitForAny("1s", hasMsg("cc.listen: started"))
+		tlog.WaitForAny("1s", hasMsg(ServerReady.String()))
+	})
 }
