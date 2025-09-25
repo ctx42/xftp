@@ -2,6 +2,7 @@ package ftpsrvtest
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/textproto"
 	"strconv"
@@ -138,4 +139,14 @@ func (tst *Tester) readLine() (string, error) {
 	line := strconv.Itoa(code) + " " + msg
 	tst.replays = append(tst.replays, line)
 	return line, nil
+}
+
+func (tst *Tester) CloseAfterTest(c io.Closer) {
+	tst.t.Helper()
+	tst.t.Cleanup(func() {
+		tst.t.Helper()
+		if err := c.Close(); err != nil {
+			tst.t.Errorf("Tester.CloseAfterTest: %s", err)
+		}
+	})
 }

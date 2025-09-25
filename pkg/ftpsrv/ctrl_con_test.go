@@ -3,8 +3,6 @@ package ftpsrv_test
 import (
 	"testing"
 
-	"github.com/ctx42/testing/pkg/assert"
-
 	"github.com/ctx42/xftp/pkg/ftpsrv/ftpsrvtest"
 
 	. "github.com/ctx42/xftp/pkg/ftpsrv"
@@ -15,8 +13,9 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.TstSession()
+
 		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
-		t.Cleanup(func() { t.Helper(); assert.NoError(t, cc.Close()) })
+		tst.CloseAfterTest(cc)
 
 		// --- When ---
 		cc.Listen()
