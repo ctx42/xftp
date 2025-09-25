@@ -20,110 +20,125 @@ import (
 
 type hidLogTrait = logkit.Trait // Don't export embedded field.
 
+// Tester is a helper for testing FTP server.
 type Tester struct {
-	*hidLogTrait               // Log test helper.
-	cliCC        net.Conn      // Client side of the control connection.
-	cliDC        net.Conn      // Client side of a data connection.
-	srvCC        net.Conn      // Server side of the control connection.
-	replays      []string      // Lines read from the client side control connection.
-	rTO          time.Duration // Timeout reading from control connection.
-	wTO          time.Duration // Timeout writing to control connection.
-	clk          func() time.Time
-	log          zerolog.Logger
-	t            tester.T
+	*hidLogTrait                  // Log test helper.
+	cliCC        net.Conn         // Client side of the control connection.
+	srvCC        net.Conn         // Server side of the control connection.
+	replays      []string         // Client side control connection messages.
+	rto          time.Duration    // Timeout reading from control connection.
+	wto          time.Duration    // Timeout writing to control connection.
+	clk          func() time.Time // Clock to use (2000-01-01 00:00:00 UTC).
+	log          zerolog.Logger   // Test logger.
+	t            tester.T         // Test manager.
 }
 
+// NewTester returns a new instance of [Tester].
 func NewTester(t tester.T) *Tester {
 	t.Helper()
-	now := time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)
-	t.Helper()
-	tst := &Tester{
-		hidLogTrait: logkit.NewTrait(t),
+	tlog := logkit.NewTrait(t)
+	now := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	return &Tester{
+		hidLogTrait: tlog,
+		log:         zerolog.New(tlog.LogWriter()),
 		replays:     make([]string, 0, 10),
-		rTO:         50 * time.Millisecond,
-		wTO:         50 * time.Millisecond,
+		rto:         50 * time.Millisecond,
+		wto:         50 * time.Millisecond,
 		clk:         timekit.ClockStartingAt(now),
 		t:           t,
 	}
-	tst.log = zerolog.New(tst.LogWriter())
+}
+
+// INE doesn't mark the test as failed when the logs weren't examined, and
+// there are no log messages with error or panic log levels.
+func (tst *Tester) INE() *Tester {
+	tst.t.Helper()
+	tst.IgnoreNonErrorLogs()
 	return tst
 }
 
+// WireUp creates server and client side [net.Conn] instance and registers
+// [Tester.cleanup] to be called after the test ends. Terminates the test on
+// error.
 func (tst *Tester) WireUp() *Tester {
 	tst.t.Helper()
 	if tst.srvCC != nil {
-		msg := "Tester.WireUp: can be created only once"
+		msg := "tester: server control connection can be created only once"
 		tst.t.Fatal(msg)
 		return tst
 	}
 	if tst.cliCC != nil {
-		msg := "Tester.WireUp: can be created only once"
+		msg := "tester: client control connection can be created only once"
 		tst.t.Fatal(msg)
 		return tst
 	}
 	tst.srvCC, tst.cliCC = net.Pipe()
+	tst.t.Cleanup(tst.cleanup)
 	return tst
 }
 
+// Logger returns test logger.
 func (tst *Tester) Logger() zerolog.Logger {
 	tst.t.Helper()
 	return tst.log
 }
 
-func (tst *Tester) SrvCon() net.Conn  { return tst.srvCC }
-func (tst *Tester) DataCon() net.Conn { return tst.cliDC }
+// SrvCon returns server side control connection created by [Tester.WireUp].
+func (tst *Tester) SrvCon() net.Conn { return tst.srvCC }
 
-func (tst *Tester) TstConfig(opts ...ftpsrv.Option) ftpsrv.Config {
+// Config returns [ftpsrv.Config] instance with values adjusted for testing.
+func (tst *Tester) Config(opts ...ftpsrv.Option) ftpsrv.Config {
 	tst.t.Helper()
 	defaults := []ftpsrv.Option{
-		ftpsrv.WithReadTimeout(tst.rTO),
-		ftpsrv.WithWriteTimeout(tst.wTO),
+		ftpsrv.WithReadTimeout(tst.rto),
+		ftpsrv.WithWriteTimeout(tst.wto),
 		ftpsrv.WithClock(tst.clk),
 	}
 	return ftpsrv.NewConfig(append(defaults, opts...)...)
 }
 
-func (tst *Tester) TstSession(opts ...ftpsrv.Option) *ftpsrv.Session {
+// Session returns [ftpsrv.Session] instance with values reflecting the tester.
+func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
 	tst.t.Helper()
-	ses := &ftpsrv.Session{
+	return &ftpsrv.Session{
 		ID:         uuid.Must(uuid.NewV7()),
-		Cfg:        tst.TstConfig(opts...),
+		Cfg:        tst.Config(opts...),
 		LocalAddr:  tst.srvCC.LocalAddr(),
 		RemoteAddr: tst.cliCC.RemoteAddr(),
 		StartedAt:  tst.clk(),
 	}
-	return ses
 }
 
-// Cmd sends command through a control channel and reads the response.
-func (tst *Tester) Cmd(cmd, format string, args ...any) *Tester {
+// SendCmd sends the command through the control connection. When the sending
+// fails, it marks the test as failed with an appropriate error message.
+func (tst *Tester) SendCmd(cmd, format string, args ...any) *Tester {
 	tst.t.Helper()
 	if opt := fmt.Sprintf(format, args...); opt != "" {
 		cmd += " " + opt
 	}
 	if err := tst.writeLine("%s", cmd); err != nil {
-		tst.t.Errorf("Tester.Cmd: %s: Tester.writeLine: %s", cmd, err)
+		tst.t.Errorf("tester.send_cmd: %s; tester.write_line: %s", cmd, err)
 	}
 	return tst
 }
 
-// Reply reads server side control connection and asserts it's equal to msg.
-// When reply doesn't match it marks the test as failed and writes error
-// message to test log.
-func (tst *Tester) Reply(msg string) *Tester {
+// GetReply reads the server side control connection and asserts it's equal to
+// the msg. When getting the replay fails, or the message does not match, it
+// marks the test as failed with an appropriate error message.
+func (tst *Tester) GetReply(msg string) *Tester {
 	tst.t.Helper()
-	tst.Replyf("%s", msg)
+	tst.GetReplyf("%s", msg)
 	return tst
 }
 
-// Replyf reads server side control connection and asserts it's equal to
-// formated message. When reply doesn't match it marks the test as failed and
-// writes error message to test log.
-func (tst *Tester) Replyf(format string, args ...any) *Tester {
+// GetReplyf reads the server side control connection and asserts it's equal to
+// the formated message. When getting the replay fails, or the message does not
+// match, it marks the test as failed with an appropriate error message.
+func (tst *Tester) GetReplyf(format string, args ...any) *Tester {
 	tst.t.Helper()
 	have, err := tst.readLine()
 	if err != nil {
-		tst.t.Errorf("Tester.Reply: Tester.readLine: %s", err)
+		tst.t.Errorf("tester.get_reply: Tester.readLine: %s", err)
 		return tst
 	}
 	want := fmt.Sprintf(format, args...)
@@ -136,13 +151,11 @@ func (tst *Tester) Replyf(format string, args ...any) *Tester {
 	return tst
 }
 
-// readLine reads and returns lines read from client side control connection.
-//
-// On error, marks the test as failed and writes error message to test log, and
-// returns empty string.
+// readLine reads lines from the client side of the control connection. When
+// reading fails, it marks the test as failed with an appropriate error message.
 func (tst *Tester) readLine() (string, error) {
 	tst.t.Helper()
-	_ = tst.cliCC.SetReadDeadline(time.Now().Add(tst.rTO))
+	_ = tst.cliCC.SetReadDeadline(time.Now().Add(tst.rto))
 	conn := textproto.NewConn(tst.cliCC)
 	code, msg, err := conn.ReadResponse(-1)
 	if err != nil {
@@ -153,20 +166,31 @@ func (tst *Tester) readLine() (string, error) {
 	return line, nil
 }
 
-// writeLine writes line to client side of control connection.
+// writeLine writes line to the client side of the control connection.
 func (tst *Tester) writeLine(format string, args ...any) error {
 	tst.t.Helper()
-	_ = tst.cliCC.SetWriteDeadline(time.Now().Add(tst.wTO))
+	_ = tst.cliCC.SetWriteDeadline(time.Now().Add(tst.wto))
 	w := textproto.NewConn(tst.cliCC).Writer
 	return w.PrintfLine(format, args...)
 }
 
+// CloseAfterTest registers the c.Close method to be called after the test ends.
 func (tst *Tester) CloseAfterTest(c io.Closer) {
 	tst.t.Helper()
 	tst.t.Cleanup(func() {
 		tst.t.Helper()
 		if err := c.Close(); err != nil {
-			tst.t.Errorf("Tester.CloseAfterTest: %s", err)
+			tst.t.Errorf("tester.close_after_test: %s", err)
 		}
 	})
+}
+
+// cleanup closes all connections and releases the tester resources.
+func (tst *Tester) cleanup() {
+	tst.t.Helper()
+	if tst.srvCC != nil {
+		if err := tst.srvCC.Close(); err != nil {
+			tst.t.Errorf("tester.cleanup: %s", err)
+		}
+	}
 }

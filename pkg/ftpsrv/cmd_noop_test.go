@@ -12,33 +12,33 @@ import (
 func Test_handleNOOP(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// --- Given ---
-		tst := ftpsrvtest.NewTester(t).WireUp()
-		ses := tst.TstSession()
+		tst := ftpsrvtest.NewTester(t).WireUp().INE()
+		ses := tst.Session()
 
 		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
-		tst.Reply(ServerReady.String())
+		tst.GetReply(ServerReady.String())
 
 		// --- When ---
-		tst.Cmd(ftpcmd.NOOP, "")
+		tst.SendCmd(ftpcmd.NOOP, "")
 
 		// --- Then ---
-		tst.Reply(NOOPSuccess.String())
+		tst.GetReply(NOOPSuccess.String())
 	})
 
 	t.Run("wrong number of arguments", func(t *testing.T) {
 		// --- Given ---
-		tst := ftpsrvtest.NewTester(t).WireUp()
-		ses := tst.TstSession()
+		tst := ftpsrvtest.NewTester(t).WireUp().INE()
+		ses := tst.Session()
 
 		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
-		tst.Reply(ServerReady.String())
+		tst.GetReply(ServerReady.String())
 
 		// --- When ---
-		tst.Cmd(ftpcmd.NOOP, "abc")
+		tst.SendCmd(ftpcmd.NOOP, "abc")
 
 		// --- Then ---
-		tst.Reply(ErrorArgNum.String())
+		tst.GetReply(ErrorArgNum.String())
 	})
 }

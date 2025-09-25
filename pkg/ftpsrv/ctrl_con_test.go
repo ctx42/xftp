@@ -12,7 +12,7 @@ func Test_CtrlCon_Listen(t *testing.T) {
 	t.Run("starts and sends a server ready message", func(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
-		ses := tst.TstSession()
+		ses := tst.Session()
 
 		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
@@ -21,7 +21,7 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		cc.Listen()
 
 		// --- Then ---
-		tst.Reply(ServerReady.String())
+		tst.GetReply(ServerReady.String())
 
 		tlog := tst.ExamineLog()
 		tlog.WaitForAny("1s", hasMsg("cc.listen: started"))
