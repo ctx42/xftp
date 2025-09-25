@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrQuit is returned by "QUIT" FTP command handler.
@@ -71,17 +70,17 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		LogError(nil, cc.log, cc.close(), nil)
 		cc.log.Debug().Msg("cc.listen: exiting")
 	}()
-	log.Debug().Msg("cc.listen: started")
+	cc.log.Debug().Msg("cc.listen: started")
 	close(started)
 
 	if err := cc.writeLine(cc.ses.Cfg.svrReadyMsg); err != nil {
-		log.Error().Err(err).Send()
+		cc.log.Error().Err(err).Send()
 	}
 
 	for {
 		select {
 		case <-cc.quitCh:
-			log.Debug().Msg("cc.listen: quitting")
+			cc.log.Debug().Msg("cc.listen: quitting")
 			return
 		default:
 		}
@@ -91,20 +90,20 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		if err != nil {
 			var e *net.OpError
 			if errors.As(err, &e) && e.Timeout() {
-				log.Debug().Msgf("cc.listen: read timeout")
+				cc.log.Debug().Msgf("cc.listen: read timeout")
 				continue
 			}
 
 			switch {
 			case strings.Contains(err.Error(), "connection reset by peer"):
-				log.Debug().Msgf("cc.listen: connection reset by peer")
+				cc.log.Debug().Msgf("cc.listen: connection reset by peer")
 
 			case errors.Is(err, io.EOF):
-				log.Debug().Msgf("cc.listen: closed by client")
+				cc.log.Debug().Msgf("cc.listen: closed by client")
 			}
 			return
 		}
-		log.Debug().Msgf("< %s", line)
+		cc.log.Debug().Msgf("< %s", line)
 
 		cmd, args := SplitCmdLine(line)
 		cmd = strings.ToUpper(cmd)
@@ -114,8 +113,8 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 				cc.mx.Unlock()
 				return
 			}
-			log.Error().Err(err).Send()
-			log.Debug().Msgf("cc.listen: handler error")
+			cc.log.Error().Err(err).Send()
+			cc.log.Debug().Msgf("cc.listen: handler error")
 		}
 		cc.mx.Unlock()
 	}
@@ -160,6 +159,6 @@ func (cc *CtrlCon) close() error {
 	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.Cfg.writeTO))
 	meta := map[string]any{"action": "cc.close"}
 	LogError(nil, cc.log, cc.proto.Close(), meta)
-	log.Debug().Msgf("cc.Close")
+	cc.log.Debug().Msgf("cc.Close")
 	return nil
 }
