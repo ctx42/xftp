@@ -44,4 +44,5 @@ func (tst *Tester) WireUp() *Tester {
 	return tst
 }
 
-func (tst *Tester) SrvConn() net.Conn { return tst.srvCC }
+func (tst *Tester) SrvCon() net.Conn  { return tst.srvCC }
+func (tst *Tester) DataCon() net.Conn { return tst.srvCC }

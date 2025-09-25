@@ -5,6 +5,9 @@ import (
 	"crypto/tls"
 	"net"
 	"strconv"
+
+	"github.com/gofrs/uuid/v5"
+	"github.com/rs/zerolog"
 )
 
 // Server represents FTP server.
@@ -13,6 +16,7 @@ type Server struct {
 	tlsCfg *tls.Config  // TLS configuration.
 	lnr    net.Listener // FTP server lnr.
 	cxl    func()
+	log    zerolog.Logger
 }
 
 // NewServer returns a new instance of [Server].
@@ -58,7 +62,8 @@ func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 		if err = srv.handleAcceptError(err); err != nil {
 			return err
 		}
-		cc := NewCtrlCon(srv.cfg, conn).WithTLS(srv.tlsCfg)
+		ses := NewSession(uuid.Must(uuid.NewV7()), srv.cfg)
+		cc := NewCtrlCon(ses, conn, srv.log).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}
 }
