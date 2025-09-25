@@ -6,4 +6,6 @@ var (
 	Goodbye     = Resp(221, "Goodbye.")
 
 	ErrorUnkCmd = Resp(500, "Unknown command %s.")
+	ErrorArgNum = Resp(500, "Wrong number of arguments.")
+	ErrorCmdSeq = Resp(503, "Bad sequence of commands.")
 )

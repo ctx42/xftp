@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
+	"github.com/ctx42/xftp/pkg/ftpcmd"
 )
 
 // ErrQuit is returned by "QUIT" FTP command handler.
@@ -19,15 +21,35 @@ var ErrQuit = errors.New("connection closing after QUIT command")
 
 // CtrlCon represents FTP control connection.
 type CtrlCon struct {
-	ses       *Session
-	tslCfg    *tls.Config
-	conn      net.Conn
-	proto     *textproto.Conn // Connection wrapped in text protocol.
-	log       zerolog.Logger
-	quitCh    chan struct{} // When closed forces connection to be closed.
-	quitFn    func()        // Called to close control channel.
-	listening bool          // The listener goroutine is listening.
-	mx        sync.RWMutex  // Guards struct fields.
+	// Current FTP session.
+	ses *Session
+
+	// Underlying connection.
+	conn net.Conn
+
+	// Connection wrapped in text protocol.
+	proto *textproto.Conn
+
+	// When set, the connection is wrapped in [tls.Server].
+	tlsCfg *tls.Config
+
+	// Logger.
+	log zerolog.Logger
+
+	// When closed forces connection to be closed.
+	quitCh chan struct{}
+
+	// Call to close the control connection.
+	quitFn func()
+
+	// True when the control connection listens for commands and is not closed.
+	listening bool
+
+	cmdPrev string // Previous recognized / implemented command.
+	cmdNext string // Command that must be issued after cmdPrev.
+
+	// Guards struct fields.
+	mx sync.RWMutex
 }
 
 // NewCtrlCon returns a new instance of [CtrlCon].
@@ -45,7 +67,9 @@ func NewCtrlCon(ses *Session, conn net.Conn, log zerolog.Logger) *CtrlCon {
 
 // WithTLS sets TLS configuration for the session.
 func (cc *CtrlCon) WithTLS(tlsCfg *tls.Config) *CtrlCon {
-	cc.tslCfg = tlsCfg
+	cc.tlsCfg = tlsCfg
+	cc.conn = tls.Server(cc.conn, cc.tlsCfg)
+	cc.proto = textproto.NewConn(cc.conn)
 	return cc
 }
 
@@ -99,7 +123,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 				cc.log.Debug().Msgf("cc.listen: connection reset by peer")
 
 			case errors.Is(err, io.EOF):
-				cc.log.Debug().Msgf("cc.listen: closed by client")
+				cc.log.Debug().Msgf("cc.listen: closed by the client")
 			}
 			return
 		}
@@ -137,8 +161,30 @@ func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
 	return nil
 }
 
+// handleCommand handles control channel command. Assumes the caller acquired
+// the lock.
 func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
-	return cc.writeLine(ErrorUnkCmd, cmd)
+	cc.log.Debug().Msgf("cc.handle: %s", cmd)
+
+	cmdNext := cc.cmdNext
+	if cmdNext != "" && cmd != ftpcmd.QUIT {
+		cc.cmdNext = ""
+		if cmd != cmdNext {
+			LogError(nil, cc.log, cc.writeLine(ErrorCmdSeq), nil)
+			return nil
+		}
+	}
+
+	var err error
+	switch cmd {
+	case ftpcmd.NOOP:
+		err = handleNOOP(cc, args...)
+		cc.cmdPrev = cmd
+	default:
+		err = cc.writeLine(ErrorUnkCmd, cmd)
+	}
+
+	return err
 }
 
 // Close closes control connection and data connection if it exists and stops
@@ -148,7 +194,7 @@ func (cc *CtrlCon) Close() error {
 	return nil
 }
 
-// Close closes control connection and data connection if it exists and stops
+// Close closes control connection, data connection if it exists and stops
 // listening for control commands. No message is sent to the client.
 func (cc *CtrlCon) close() error {
 	cc.mx.Lock()

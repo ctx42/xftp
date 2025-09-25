@@ -95,6 +95,18 @@ func (tst *Tester) TstSession(opts ...ftpsrv.Option) *ftpsrv.Session {
 	return ses
 }
 
+// Cmd sends command through a control channel and reads the response.
+func (tst *Tester) Cmd(cmd, format string, args ...any) *Tester {
+	tst.t.Helper()
+	if opt := fmt.Sprintf(format, args...); opt != "" {
+		cmd += " " + opt
+	}
+	if err := tst.writeLine("%s", cmd); err != nil {
+		tst.t.Errorf("Tester.Cmd: %s: Tester.writeLine: %s", cmd, err)
+	}
+	return tst
+}
+
 // Reply reads server side control connection and asserts it's equal to msg.
 // When reply doesn't match it marks the test as failed and writes error
 // message to test log.
@@ -139,6 +151,14 @@ func (tst *Tester) readLine() (string, error) {
 	line := strconv.Itoa(code) + " " + msg
 	tst.replays = append(tst.replays, line)
 	return line, nil
+}
+
+// writeLine writes line to client side of control connection.
+func (tst *Tester) writeLine(format string, args ...any) error {
+	tst.t.Helper()
+	_ = tst.cliCC.SetWriteDeadline(time.Now().Add(tst.wTO))
+	w := textproto.NewConn(tst.cliCC).Writer
+	return w.PrintfLine(format, args...)
 }
 
 func (tst *Tester) CloseAfterTest(c io.Closer) {

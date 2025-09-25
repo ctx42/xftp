@@ -14,7 +14,7 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.TstSession()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
 
 		// --- When ---
