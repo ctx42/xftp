@@ -2,8 +2,6 @@ package ftpsrv
 
 import (
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 // Option represents an FTP configuration option.
@@ -57,9 +55,16 @@ func WithReadyMsg(rsp Response) Option {
 	}
 }
 
-func WithLogger(log zerolog.Logger) Option {
+func WithReadTimeout(timeout time.Duration) Option {
 	return func(cfg Config) Config {
-		cfg.log = log
+		cfg.readTO = timeout
+		return cfg
+	}
+}
+
+func WithWriteTimeout(timeout time.Duration) Option {
+	return func(cfg Config) Config {
+		cfg.writeTO = timeout
 		return cfg
 	}
 }
@@ -77,7 +82,6 @@ type Config struct {
 
 	cert []byte // Certificate PEM block.
 	key  []byte // Certificate key PEM block.
-	log  zerolog.Logger
 }
 
 // NewConfig returns default FTP server configuration options.
@@ -89,7 +93,6 @@ func NewConfig(opts ...Option) Config {
 		writeTO:     50 * time.Millisecond,
 		clock:       func() time.Time { return time.Now().UTC() },
 		svrReadyMsg: ServerReady,
-		log:         zerolog.Nop(),
 	}
 	for _, opt := range opts {
 		cfg = opt(cfg)

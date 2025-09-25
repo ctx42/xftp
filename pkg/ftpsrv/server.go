@@ -62,7 +62,13 @@ func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 		if err = srv.handleAcceptError(err); err != nil {
 			return err
 		}
-		ses := NewSession(uuid.Must(uuid.NewV7()), srv.cfg)
+		ses := &Session{
+			ID:         uuid.Must(uuid.NewV7()),
+			Cfg:        srv.cfg,
+			LocalAddr:  conn.LocalAddr(),
+			RemoteAddr: conn.RemoteAddr(),
+			StartedAt:  srv.cfg.clock(),
+		}
 		cc := NewCtrlCon(ses, conn, srv.log).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}
