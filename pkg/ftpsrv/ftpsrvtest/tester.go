@@ -12,7 +12,6 @@ import (
 	"github.com/ctx42/testing/pkg/kit/timekit"
 	"github.com/ctx42/testing/pkg/notice"
 	"github.com/ctx42/testing/pkg/tester"
-	"github.com/gofrs/uuid/v5"
 	"github.com/rs/zerolog"
 
 	"github.com/ctx42/xftp/pkg/ftpsrv"
@@ -100,13 +99,7 @@ func (tst *Tester) Config(opts ...ftpsrv.Option) ftpsrv.Config {
 // Session returns [ftpsrv.Session] instance with values reflecting the tester.
 func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
 	tst.t.Helper()
-	return &ftpsrv.Session{
-		ID:         uuid.Must(uuid.NewV7()),
-		Cfg:        tst.Config(opts...),
-		LocalAddr:  tst.srvCC.LocalAddr(),
-		RemoteAddr: tst.cliCC.RemoteAddr(),
-		StartedAt:  tst.clk(),
-	}
+	return ftpsrv.NewSession(tst.Config(opts...), tst.srvCC)
 }
 
 // SendCmd sends the command through the control connection. When the sending

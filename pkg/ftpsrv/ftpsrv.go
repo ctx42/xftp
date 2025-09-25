@@ -1,6 +1,8 @@
 package ftpsrv
 
 import (
+	"net"
+
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -20,4 +22,13 @@ type Feature interface {
 
 	// Execute executes the feature within the given FTP session.
 	Execute(ses ISession, args ...string)
+}
+
+// ConnInfo represents an FTP connection info.
+type ConnInfo interface {
+	// LocalAddr returns the local network address, if known.
+	LocalAddr() net.Addr
+
+	// RemoteAddr returns the remote network address, if known.
+	RemoteAddr() net.Addr
 }

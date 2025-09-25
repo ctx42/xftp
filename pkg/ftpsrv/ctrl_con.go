@@ -45,8 +45,11 @@ type CtrlCon struct {
 	// True when the control connection listens for commands and is not closed.
 	listening bool
 
-	cmdPrev string // Previous recognized / implemented command.
-	cmdNext string // Command that must be issued after cmdPrev.
+	// Previous recognized / implemented command.
+	cmdPrev string
+
+	// Command that must be issued after cmdPrev.
+	cmdNext string
 
 	// Guards struct fields.
 	mx sync.RWMutex
@@ -97,7 +100,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 	cc.log.Debug().Msg("cc.listen: started")
 	close(started)
 
-	if err := cc.writeLine(cc.ses.Cfg.svrReadyMsg); err != nil {
+	if err := cc.writeLine(cc.ses.cfg.svrReadyMsg); err != nil {
 		cc.log.Error().Err(err).Send()
 	}
 
@@ -109,7 +112,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		default:
 		}
 
-		_ = cc.conn.SetReadDeadline(time.Now().Add(cc.ses.Cfg.readTO))
+		_ = cc.conn.SetReadDeadline(time.Now().Add(cc.ses.cfg.readTO))
 		line, err := cc.proto.ReadLine()
 		if err != nil {
 			var e *net.OpError
@@ -154,7 +157,7 @@ func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
 	}
 
 	cc.log.Debug().Msgf("> %s", msg)
-	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.Cfg.writeTO))
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
 	if err := cc.proto.PrintfLine("%s", msg); err != nil {
 		return fmt.Errorf("cc.writeLine: line send: %w, msg: %s", err, msg)
 	}
@@ -202,7 +205,7 @@ func (cc *CtrlCon) close() error {
 	if !cc.listening {
 		return nil
 	}
-	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.Cfg.writeTO))
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
 	meta := map[string]any{"action": "cc.close"}
 	LogError(nil, cc.log, cc.proto.Close(), meta)
 	cc.log.Debug().Msgf("cc.Close")

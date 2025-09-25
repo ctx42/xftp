@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/rs/zerolog"
 )
 
@@ -56,19 +55,12 @@ func (srv *Server) ListenAndServe(ctx context.Context) error {
 
 func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 	srv.lnr = lnr
-
 	for {
 		conn, err := srv.lnr.Accept()
 		if err = srv.handleAcceptError(err); err != nil {
 			return err
 		}
-		ses := &Session{
-			ID:         uuid.Must(uuid.NewV7()),
-			Cfg:        srv.cfg,
-			LocalAddr:  conn.LocalAddr(),
-			RemoteAddr: conn.RemoteAddr(),
-			StartedAt:  srv.cfg.clock(),
-		}
+		ses := NewSession(srv.cfg, conn)
 		cc := NewCtrlCon(ses, conn, srv.log).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}
