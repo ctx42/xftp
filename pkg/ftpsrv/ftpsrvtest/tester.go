@@ -85,6 +85,18 @@ func (tst *Tester) Logger() zerolog.Logger {
 // SrvCon returns server side control connection created by [Tester.WireUp].
 func (tst *Tester) SrvCon() net.Conn { return tst.srvCC }
 
+// CliConClose closes client side of control connection without sending any
+// commands. If closing fails, it marks the test as failed with an appropriate
+// error message.
+func (tst *Tester) CliConClose() *Tester {
+	tst.t.Helper()
+	if err := tst.cliCC.Close(); err != nil {
+		tst.t.Errorf("tester.cli_con_close: %s", err)
+		tst.cliCC = nil
+	}
+	return tst
+}
+
 // Config returns [ftpsrv.Config] instance with values adjusted for testing.
 func (tst *Tester) Config(opts ...ftpsrv.Option) ftpsrv.Config {
 	tst.t.Helper()
@@ -102,7 +114,7 @@ func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
 	return ftpsrv.NewSession(tst.Config(opts...), tst.srvCC)
 }
 
-// SendCmd sends the command through the control connection. When the sending
+// SendCmd sends the command through the control connection. If the sending
 // fails, it marks the test as failed with an appropriate error message.
 func (tst *Tester) SendCmd(cmd, format string, args ...any) *Tester {
 	tst.t.Helper()

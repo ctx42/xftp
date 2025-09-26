@@ -101,7 +101,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 	close(started)
 
 	if err := cc.writeLine(cc.ses.cfg.svrReadyMsg); err != nil {
-		cc.log.Error().Err(err).Send()
+		LogError(nil, cc.log, err, nil)
 	}
 
 	for {
@@ -126,7 +126,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 				cc.log.Debug().Msgf("cc.listen: connection reset by peer")
 
 			case errors.Is(err, io.EOF):
-				cc.log.Debug().Msgf("cc.listen: closed by the client")
+				cc.log.Debug().Msgf("cc.listen: connection closed by client")
 			}
 			return
 		}
@@ -140,7 +140,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 				cc.mx.Unlock()
 				return
 			}
-			cc.log.Error().Err(err).Send()
+			LogError(nil, cc.log, err, nil)
 			cc.log.Debug().Msgf("cc.listen: handler error")
 		}
 		cc.mx.Unlock()
@@ -156,11 +156,11 @@ func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
 		return nil
 	}
 
-	cc.log.Debug().Msgf("> %s", msg)
 	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
 	if err := cc.proto.PrintfLine("%s", msg); err != nil {
-		return fmt.Errorf("cc.writeLine: line send: %w, msg: %s", err, msg)
+		return fmt.Errorf("cc.write_line fail: %w; msg: %s", err, msg)
 	}
+	cc.log.Debug().Msgf("> %s", msg)
 	return nil
 }
 

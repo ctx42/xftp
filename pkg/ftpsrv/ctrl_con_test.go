@@ -2,6 +2,7 @@ package ftpsrv_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ctx42/testing/pkg/assert"
 
@@ -72,5 +73,53 @@ func Test_CtrlCon_Listen(t *testing.T) {
 			"> 200 NOOP OK.",
 		}
 		assert.Equal(t, hCCL, wCCL)
+	})
+
+	t.Run("client closes the connection after connecting", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.Session()
+
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		tst.CloseAfterTest(cc)
+
+		// --- When ---
+		cc.Listen()
+
+		// --- Then ---
+		tst.CliConClose()
+
+		time.Sleep(time.Second)
+		tlog := tst.ExamineLog()
+		want := "" +
+			"cc.write_line fail: " +
+			"io: read/write on closed pipe; " +
+			"msg: 220 FTP Server ready."
+		tlog.WaitForAny("1s", checkMsg(want))
+		tlog.WaitForAny("1s", checkMsg("cc.listen: exiting"))
+		assert.Equal(t, []string{}, CtrlMgs(tlog))
+	})
+
+	t.Run("client closes the connection after the welcome message", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.Session()
+
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		tst.CloseAfterTest(cc)
+
+		// --- When ---
+		cc.Listen()
+
+		// --- Then ---
+		tst.GetReply(ServerReady.String())
+		tst.CliConClose()
+
+		time.Sleep(time.Second)
+		tlog := tst.ExamineLog()
+		want := "cc.listen: connection closed by client"
+		tlog.WaitForAny("1s", checkMsg(want))
+		tlog.WaitForAny("1s", checkMsg("cc.listen: exiting"))
+		assert.Equal(t, []string{"> 220 FTP Server ready."}, CtrlMgs(tlog))
 	})
 }
