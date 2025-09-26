@@ -147,20 +147,10 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 	}
 }
 
-// writeLine formats and writes the given arguments to the [textproto.Writer]
-// using the specified format string.
-func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
-	msg := resp.With(args...)
-	if msg == "" {
-		cc.log.Debug().Msg(">")
-		return nil
-	}
-
-	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
-	if err := cc.proto.PrintfLine("%s", msg); err != nil {
-		return fmt.Errorf("cc.write_line fail: %w; msg: %s", err, msg)
-	}
-	cc.log.Debug().Msgf("> %s", msg)
+// Close closes control connection and data connection if it exists and stops
+// listening for control commands. No message is sent to the client.
+func (cc *CtrlCon) Close() error {
+	cc.quitFn()
 	return nil
 }
 
@@ -190,10 +180,20 @@ func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 	return err
 }
 
-// Close closes control connection and data connection if it exists and stops
-// listening for control commands. No message is sent to the client.
-func (cc *CtrlCon) Close() error {
-	cc.quitFn()
+// writeLine formats and writes the given arguments to the [textproto.Writer]
+// using the specified format string.
+func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
+	msg := resp.With(args...)
+	if msg == "" {
+		cc.log.Debug().Msg(">")
+		return nil
+	}
+
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
+	if err := cc.proto.PrintfLine("%s", msg); err != nil {
+		return fmt.Errorf("cc.write_line fail: %w; msg: %s", err, msg)
+	}
+	cc.log.Debug().Msgf("> %s", msg)
 	return nil
 }
 

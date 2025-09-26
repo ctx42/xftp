@@ -89,7 +89,6 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Then ---
 		tst.CliConClose()
 
-		time.Sleep(time.Second)
 		tlog := tst.ExamineLog()
 		want := "" +
 			"cc.write_line fail: " +
@@ -179,5 +178,30 @@ func Test_CtrlCon_handleCommand(t *testing.T) {
 			"> " + ErrorUnkCmd.With("UNKNOWN"),
 		}
 		assert.Equal(t, hCCL, wCCL)
+	})
+}
+
+func Test_CtrCon_writeLine(t *testing.T) {
+	t.Run("deadline sending line", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.Session()
+
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		tst.CloseAfterTest(cc)
+
+		// --- When ---
+		// Timeout sending is caused by the test
+		// not picking up a welcome message.
+
+		// --- Then ---
+		tlog := tst.ExamineLog()
+		want := "" +
+			"cc.write_line fail: " +
+			"write pipe: i/o timeout; " +
+			"msg: 220 FTP Server ready."
+		tlog.WaitForAny("1s", checkMsg(want))
+		WaitForCose(t, cc, tlog, "cc.listen: exiting")
+		assert.Empty(t, CtrlMgs(tlog))
 	})
 }
