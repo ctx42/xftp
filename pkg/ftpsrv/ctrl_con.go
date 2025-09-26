@@ -117,7 +117,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		if err != nil {
 			var e *net.OpError
 			if errors.As(err, &e) && e.Timeout() {
-				cc.log.Debug().Msgf("cc.listen: read timeout")
+				cc.log.Trace().Msgf("cc.listen: read timeout")
 				continue
 			}
 
@@ -208,6 +208,6 @@ func (cc *CtrlCon) close() error {
 	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
 	meta := map[string]any{"action": "cc.close"}
 	LogError(nil, cc.log, cc.proto.Close(), meta)
-	cc.log.Debug().Msgf("cc.Close")
+	cc.log.Debug().Msgf("cc.close")
 	return nil
 }

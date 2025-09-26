@@ -183,7 +183,12 @@ func (tst *Tester) cleanup() {
 	tst.t.Helper()
 	if tst.srvCC != nil {
 		if err := tst.srvCC.Close(); err != nil {
-			tst.t.Errorf("tester.cleanup: %s", err)
+			tst.t.Errorf("tester.cleanup.srv: %s", err)
+		}
+	}
+	if tst.cliCC != nil {
+		if err := tst.cliCC.Close(); err != nil {
+			tst.t.Errorf("tester.cleanup.cli: %s", err)
 		}
 	}
 }
