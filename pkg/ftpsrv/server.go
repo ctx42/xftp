@@ -37,6 +37,10 @@ func NewServer(cfg Config) (*Server, error) {
 	return srv, nil
 }
 
+func (srv *Server) RegisterCommand(cmd Command) {
+	srv.cfg.features[cmd.Name()] = cmd
+}
+
 // ListenAndServe is a blocking call that starts the FTP server.
 func (srv *Server) ListenAndServe(ctx context.Context) error {
 	address := net.JoinHostPort(srv.cfg.host, strconv.Itoa(srv.cfg.port))
@@ -61,7 +65,7 @@ func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 			return err
 		}
 		ses := NewSession(srv.cfg.clock(), conn.LocalAddr(), conn.RemoteAddr())
-		cc := NewCtrlCon(ses, srv.cfg, conn, srv.log).WithTLS(srv.tlsCfg)
+		cc := NewCtrlCon(ses, srv.cfg.Clone(), conn, srv.log).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}
 }

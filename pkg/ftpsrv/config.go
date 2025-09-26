@@ -2,6 +2,7 @@ package ftpsrv
 
 import (
 	"maps"
+	"slices"
 	"sort"
 	"time"
 )
@@ -147,6 +148,8 @@ func (cfg Config) HasFeature(feat string) bool {
 
 // DisableFeature disables the given FTP command.
 func (cfg Config) DisableFeature(name string) Config {
+	cfg.cert = slices.Clone(cfg.cert)
+	cfg.key = slices.Clone(cfg.key)
 	cfg.features = maps.Clone(cfg.features)
 	delete(cfg.features, name)
 	return cfg
@@ -155,9 +158,18 @@ func (cfg Config) DisableFeature(name string) Config {
 // DisableAllFeatures disables all currently enabled features. The original
 // instance of Config is not changed in any way.
 func (cfg Config) DisableAllFeatures() Config {
+	cfg.cert = slices.Clone(cfg.cert)
+	cfg.key = slices.Clone(cfg.key)
 	cfg.features = maps.Clone(cfg.features)
 	for name := range cfg.features {
 		delete(cfg.features, name)
 	}
+	return cfg
+}
+
+func (cfg Config) Clone() Config {
+	cfg.cert = slices.Clone(cfg.cert)
+	cfg.key = slices.Clone(cfg.key)
+	cfg.features = maps.Clone(cfg.features)
 	return cfg
 }

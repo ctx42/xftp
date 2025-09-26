@@ -83,6 +83,10 @@ func (cc *CtrlCon) Config() Config {
 	return cc.cfg
 }
 
+func (cc *CtrlCon) RegisterCommand(cmd Command) {
+	cc.cfg.features[cmd.Name()] = cmd
+}
+
 // WithTLS sets TLS configuration for the session.
 func (cc *CtrlCon) WithTLS(tlsCfg *tls.Config) *CtrlCon {
 	cc.tlsCfg = tlsCfg
