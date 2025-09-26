@@ -60,7 +60,7 @@ func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
 		if err = srv.handleAcceptError(err); err != nil {
 			return err
 		}
-		ses := NewSession(srv.cfg, conn)
+		ses := NewSession(srv.cfg, conn.LocalAddr(), conn.RemoteAddr())
 		cc := NewCtrlCon(ses, conn, srv.log).WithTLS(srv.tlsCfg)
 		go cc.Listen()
 	}

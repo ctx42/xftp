@@ -1,8 +1,6 @@
 package ftpsrv
 
 import (
-	"net"
-
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -34,11 +32,6 @@ type ISession interface {
 	ID() uuid.UUID
 }
 
-// ConnInfo represents an FTP connection info.
-type ConnInfo interface {
-	// LocalAddr returns the local network address, if known.
-	LocalAddr() net.Addr
-
-	// RemoteAddr returns the remote network address, if known.
-	RemoteAddr() net.Addr
-}
+// type Session interface {
+//
+// }

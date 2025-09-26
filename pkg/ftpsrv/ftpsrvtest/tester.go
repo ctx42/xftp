@@ -112,7 +112,11 @@ func (tst *Tester) Config(opts ...ftpsrv.Option) ftpsrv.Config {
 // Session returns [ftpsrv.Session] instance with values reflecting the tester.
 func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
 	tst.t.Helper()
-	return ftpsrv.NewSession(tst.Config(opts...), tst.srvCC)
+	return ftpsrv.NewSession(
+		tst.Config(opts...),
+		tst.srvCC.LocalAddr(),
+		tst.srvCC.RemoteAddr(),
+	)
 }
 
 // SendCmd sends the command through the control connection. If the sending

@@ -19,12 +19,12 @@ type Session struct {
 }
 
 // NewSession returns a new instance of [Session].
-func NewSession(cfg Config, inf ConnInfo) *Session {
+func NewSession(cfg Config, local, remote net.Addr) *Session {
 	return &Session{
 		id:         uuid.Must(uuid.NewV7()),
 		cfg:        cfg,
 		startedAt:  cfg.clock(),
-		localAddr:  inf.LocalAddr(),
-		remoteAddr: inf.RemoteAddr(),
+		localAddr:  local,
+		remoteAddr: remote,
 	}
 }
