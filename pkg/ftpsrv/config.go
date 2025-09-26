@@ -56,6 +56,8 @@ func WithReadyMsg(rsp Response) Option {
 }
 
 func WithReadTimeout(timeout time.Duration) Option {
+	// TODO(rz): document this.
+	// TODO(rz): test this.
 	return func(cfg Config) Config {
 		cfg.readTO = timeout
 		return cfg
@@ -63,6 +65,8 @@ func WithReadTimeout(timeout time.Duration) Option {
 }
 
 func WithWriteTimeout(timeout time.Duration) Option {
+	// TODO(rz): document this.
+	// TODO(rz): test this.
 	return func(cfg Config) Config {
 		cfg.writeTO = timeout
 		return cfg

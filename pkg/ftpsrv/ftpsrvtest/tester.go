@@ -24,7 +24,6 @@ type Tester struct {
 	*hidLogTrait                  // Log test helper.
 	cliCC        net.Conn         // Client side of the control connection.
 	srvCC        net.Conn         // Server side of the control connection.
-	replays      []string         // Client side control connection messages.
 	rto          time.Duration    // Timeout reading from control connection.
 	wto          time.Duration    // Timeout writing to control connection.
 	clk          func() time.Time // Clock to use (2000-01-01 00:00:00 UTC).
@@ -40,7 +39,6 @@ func NewTester(t tester.T) *Tester {
 	return &Tester{
 		hidLogTrait: tlog,
 		log:         zerolog.New(tlog.LogWriter()),
-		replays:     make([]string, 0, 10),
 		rto:         50 * time.Millisecond,
 		wto:         50 * time.Millisecond,
 		clk:         timekit.ClockStartingAt(now),
@@ -81,6 +79,9 @@ func (tst *Tester) Logger() zerolog.Logger {
 	tst.t.Helper()
 	return tst.log
 }
+
+// Clock returns clock used in the [Tester].
+func (tst *Tester) Clock() func() time.Time { return tst.clk }
 
 // SrvCon returns server side control connection created by [Tester.WireUp].
 func (tst *Tester) SrvCon() net.Conn { return tst.srvCC }
@@ -167,7 +168,6 @@ func (tst *Tester) readLine() (string, error) {
 		return "", err
 	}
 	line := strconv.Itoa(code) + " " + msg
-	tst.replays = append(tst.replays, line)
 	return line, nil
 }
 

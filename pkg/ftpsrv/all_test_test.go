@@ -12,8 +12,7 @@ import (
 // checkMsg is a convenience for checking a log message is equal to the string.
 var checkMsg = logkit.CheckMsg
 
-// CtrlMgs retrieves all log control channel messages from the log and returns
-// them.
+// CtrlMgs returns all logged control channel messages from the [logkit.Tester].
 func CtrlMgs(tst *logkit.Tester) []string {
 	var ret []string
 	var filter = func(ent logkit.Entry) error {
