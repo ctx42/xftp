@@ -26,4 +26,5 @@ func NewSession(startedAt time.Time, local, remote net.Addr) *Session {
 		remoteAddr: remote,
 	}
 }
+
 func (ses *Session) ID() uuid.UUID { return ses.id }
