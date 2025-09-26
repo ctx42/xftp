@@ -123,3 +123,61 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		assert.Equal(t, []string{"> 220 FTP Server ready."}, CtrlMgs(tlog))
 	})
 }
+
+func Test_CtrlCon_handleCommand(t *testing.T) {
+	t.Run("handle command", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.Session()
+
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		tst.CloseAfterTest(cc)
+		tst.GetReply(ServerReady.String())
+
+		// --- When ---
+		tst.SendCmd(ftpcmd.NOOP, "")
+
+		// --- Then ---
+		tst.GetReply(NOOPSuccess.String())
+
+		tlog := tst.ExamineLog()
+		WaitForCose(t, cc, tlog, "cc.listen: exiting")
+		tlog.Entries().AssertMsg("cc.handle: NOOP")
+
+		hCCL := CtrlMgs(tlog)
+		wCCL := []string{
+			"> 220 FTP Server ready.",
+			"< NOOP",
+			"> 200 NOOP OK.",
+		}
+		assert.Equal(t, hCCL, wCCL)
+	})
+
+	t.Run("handle unknown command", func(t *testing.T) {
+		// --- Given ---
+		tst := ftpsrvtest.NewTester(t).WireUp()
+		ses := tst.Session()
+
+		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		tst.CloseAfterTest(cc)
+		tst.GetReply(ServerReady.String())
+
+		// --- When ---
+		tst.SendCmd("UNKNOWN", "")
+
+		// --- Then ---
+		tst.GetReply(ErrorUnkCmd.With("UNKNOWN"))
+
+		tlog := tst.ExamineLog()
+		WaitForCose(t, cc, tlog, "cc.listen: exiting")
+		tlog.Entries().AssertMsg("cc.handle: UNKNOWN")
+
+		hCCL := CtrlMgs(tlog)
+		wCCL := []string{
+			"> 220 FTP Server ready.",
+			"< UNKNOWN",
+			"> " + ErrorUnkCmd.With("UNKNOWN"),
+		}
+		assert.Equal(t, hCCL, wCCL)
+	})
+}
