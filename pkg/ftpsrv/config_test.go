@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/ctx42/testing/pkg/assert"
+
+	"github.com/ctx42/xftp/pkg/ftpcmd"
 )
 
 func Test_WithHost(t *testing.T) {
@@ -96,8 +98,9 @@ func Test_NewConfig(t *testing.T) {
 		assert.Equal(t, ServerReady, cfg.svrReadyMsg)
 		assert.Nil(t, cfg.cert)
 		assert.Nil(t, cfg.key)
+		assert.Len(t, 1, cfg.features)
 
-		assert.Fields(t, 10, Config{}) // Update the above assertions on fail.
+		assert.Fields(t, 11, Config{}) // Update the above assertions on fail.
 	})
 
 	t.Run("with option", func(t *testing.T) {
@@ -107,4 +110,16 @@ func Test_NewConfig(t *testing.T) {
 		// --- Then ---
 		assert.Equal(t, "1.2.3.4", cfg.host)
 	})
+}
+
+func Test_Config_Features(t *testing.T) {
+	// --- Given ---
+	cfg := NewConfig()
+
+	// --- When ---
+	have := cfg.Features()
+
+	// --- Then ---
+	want := []string{ftpcmd.NOOP}
+	assert.Equal(t, want, have)
 }

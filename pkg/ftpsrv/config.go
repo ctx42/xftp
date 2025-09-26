@@ -1,6 +1,8 @@
 package ftpsrv
 
 import (
+	"maps"
+	"sort"
 	"time"
 )
 
@@ -73,6 +75,11 @@ func WithWriteTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithoutFeature is the [NewConfig] option disabling support for FTP command.
+func WithoutFeature(feat string) Option {
+	return func(cfg Config) Config { return cfg.DisableFeature(feat) }
+}
+
 // Config represents FTP server configuration.
 type Config struct {
 	host        string           // FTP listening address.
@@ -86,6 +93,9 @@ type Config struct {
 
 	cert []byte // Certificate PEM block.
 	key  []byte // Certificate key PEM block.
+
+	// List of available FTP commands.
+	features map[string]struct{}
 }
 
 // NewConfig returns default FTP server configuration options.
@@ -97,9 +107,56 @@ func NewConfig(opts ...Option) Config {
 		writeTO:     50 * time.Millisecond,
 		clock:       func() time.Time { return time.Now().UTC() },
 		svrReadyMsg: ServerReady,
+		features:    make(map[string]struct{}, 20),
+	}
+	// Get all implemented commands.
+	for name := range handlers {
+		cfg.features[name] = struct{}{}
 	}
 	for _, opt := range opts {
 		cfg = opt(cfg)
+	}
+	return cfg
+}
+
+// Features returns a sorted slice of enabled features.
+func (cfg Config) Features() []string {
+	var feats []string
+	for cmd := range cfg.features {
+		feats = append(feats, cmd)
+	}
+	sort.Strings(feats)
+	return feats
+}
+
+// HasFeature returns true when the feature is enabled.
+func (cfg Config) HasFeature(feat string) bool {
+	_, ok := cfg.features[feat]
+	return ok
+}
+
+// EnableFeature enables given FTP command(s).
+func (cfg Config) EnableFeature(commands ...string) Config {
+	cfg.features = maps.Clone(cfg.features)
+	for _, cmd := range commands {
+		cfg.features[cmd] = struct{}{}
+	}
+	return cfg
+}
+
+// DisableFeature disables the given FTP command.
+func (cfg Config) DisableFeature(command string) Config {
+	cfg.features = maps.Clone(cfg.features)
+	delete(cfg.features, command)
+	return cfg
+}
+
+// DisableAllFeatures disables all currently enabled features. The original
+// instance of Config is not changed in any way.
+func (cfg Config) DisableAllFeatures() Config {
+	cfg.features = maps.Clone(cfg.features)
+	for name := range cfg.features {
+		delete(cfg.features, name)
 	}
 	return cfg
 }

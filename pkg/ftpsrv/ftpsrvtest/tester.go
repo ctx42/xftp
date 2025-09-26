@@ -117,7 +117,7 @@ func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
 
 // SendCmd sends the command through the control connection. If the sending
 // fails, it marks the test as failed with an appropriate error message.
-func (tst *Tester) SendCmd(cmd, format string, args ...any) *Tester {
+func (tst *Tester) SendCmd(cmd string, format string, args ...any) *Tester {
 	tst.t.Helper()
 	if opt := fmt.Sprintf(format, args...); opt != "" {
 		cmd += " " + opt

@@ -51,6 +51,9 @@ type CtrlCon struct {
 	// Command that must be issued after cmdPrev.
 	cmdNext string
 
+	// Available FTP commands.
+	handlers map[string]Command
+
 	// Guards struct fields.
 	mx sync.RWMutex
 }
@@ -132,8 +135,8 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		}
 		cc.log.Debug().Msgf("< %s", line)
 
-		cmd, args := SplitCmdLine(line)
-		cmd = strings.ToUpper(cmd)
+		str, args := SplitCmdLine(line)
+		cmd := strings.ToUpper(str)
 		cc.mx.Lock()
 		if err = cc.handleCommand(cmd, args...); err != nil {
 			if errors.Is(err, ErrQuit) {
@@ -168,15 +171,19 @@ func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 		}
 	}
 
-	var err error
-	switch cmd {
-	case ftpcmd.NOOP:
-		err = handleNOOP(cc, args...)
+	// Commands may be implemented but not turned on.
+	if !cc.ses.cfg.HasFeature(cmd) {
 		cc.cmdPrev = cmd
-	default:
-		err = cc.writeLine(ErrorUnkCmd, cmd)
+		return cc.writeLine(ErrorUnkCmd, cmd)
 	}
 
+	var err error
+	if hdl, ok := handlers[cmd]; ok {
+		err = hdl.Handle(cc, args...)
+		cc.cmdPrev = cmd
+	} else {
+		err = cc.writeLine(ErrorUnkCmd, cmd)
+	}
 	return err
 }
 
