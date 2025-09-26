@@ -10,7 +10,6 @@ import (
 // Session represents single FTP session.
 type Session struct {
 	id         uuid.UUID
-	cfg        Config
 	localAddr  net.Addr
 	remoteAddr net.Addr
 	startedAt  time.Time
@@ -19,12 +18,12 @@ type Session struct {
 }
 
 // NewSession returns a new instance of [Session].
-func NewSession(cfg Config, local, remote net.Addr) *Session {
+func NewSession(startedAt time.Time, local, remote net.Addr) *Session {
 	return &Session{
 		id:         uuid.Must(uuid.NewV7()),
-		cfg:        cfg,
-		startedAt:  cfg.clock(),
+		startedAt:  startedAt,
 		localAddr:  local,
 		remoteAddr: remote,
 	}
 }
+func (ses *Session) ID() uuid.UUID { return ses.id }

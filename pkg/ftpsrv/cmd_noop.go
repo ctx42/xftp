@@ -8,9 +8,9 @@ type CmdNOOP struct{}
 func (cmd CmdNOOP) Name() string { return "NOOP" }
 func (cmd CmdNOOP) Flags() Flags { return FlagBase | FlagMinimal }
 
-func (cmd CmdNOOP) Handle(cc *CtrlCon, args ...string) error {
+func (cmd CmdNOOP) Handle(cc ControlConn, args ...string) error {
 	if len(args) != 0 {
-		return cc.writeLine(ErrorArgNum)
+		return cc.WriteLine(ErrorArgNum)
 	}
-	return cc.writeLine(NOOPSuccess)
+	return cc.WriteLine(NOOPSuccess)
 }

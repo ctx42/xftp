@@ -14,8 +14,9 @@ func Test_handleNOOP(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp().INE()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
 		tst.GetReply(ServerReady.String())
 
@@ -30,8 +31,9 @@ func Test_handleNOOP(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp().INE()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
 		tst.GetReply(ServerReady.String())
 

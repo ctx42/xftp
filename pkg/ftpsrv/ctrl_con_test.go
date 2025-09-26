@@ -16,9 +16,10 @@ func Test_NewCtrlCon(t *testing.T) {
 	// --- Given ---
 	tst := ftpsrvtest.NewTester(t).WireUp()
 	ses := tst.Session()
+	cfg := tst.Config()
 
 	// --- When ---
-	cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+	cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger())
 
 	// --- Then ---
 	assert.NoError(t, cc.Close())
@@ -30,8 +31,9 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
 
 		// --- When ---
@@ -52,8 +54,9 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
 
 		// --- When ---
@@ -79,8 +82,9 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
 
 		// --- When ---
@@ -103,8 +107,9 @@ func Test_CtrlCon_Listen(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger())
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger())
 		tst.CloseAfterTest(cc)
 
 		// --- When ---
@@ -128,8 +133,9 @@ func Test_CtrlCon_handleCommand(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
 		tst.GetReply(ServerReady.String())
 
@@ -156,8 +162,9 @@ func Test_CtrlCon_handleCommand(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
 		tst.GetReply(ServerReady.String())
 
@@ -186,8 +193,9 @@ func Test_CtrCon_writeLine(t *testing.T) {
 		// --- Given ---
 		tst := ftpsrvtest.NewTester(t).WireUp()
 		ses := tst.Session()
+		cfg := tst.Config()
 
-		cc := NewCtrlCon(ses, tst.SrvCon(), tst.Logger()).Listen()
+		cc := NewCtrlCon(ses, cfg, tst.SrvCon(), tst.Logger()).Listen()
 		tst.CloseAfterTest(cc)
 
 		// --- When ---

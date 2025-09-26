@@ -23,7 +23,7 @@ type Command interface {
 	Flags() Flags
 
 	// Handle handles the command.
-	Handle(cc *CtrlCon, args ...string) error
+	Handle(cc ControlConn, args ...string) error
 }
 
 // ISession represents an FTP session.
@@ -32,6 +32,8 @@ type ISession interface {
 	ID() uuid.UUID
 }
 
-// type Session interface {
-//
-// }
+type ControlConn interface {
+	WriteLine(rsp Response, args ...any) error
+	Session() ISession
+	Config() Config
+}

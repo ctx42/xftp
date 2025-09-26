@@ -24,6 +24,9 @@ type CtrlCon struct {
 	// Current FTP session.
 	ses *Session
 
+	// Configuration.
+	cfg Config
+
 	// Underlying connection.
 	conn net.Conn
 
@@ -59,16 +62,25 @@ type CtrlCon struct {
 }
 
 // NewCtrlCon returns a new instance of [CtrlCon].
-func NewCtrlCon(ses *Session, conn net.Conn, log zerolog.Logger) *CtrlCon {
+func NewCtrlCon(ses *Session, cfg Config, conn net.Conn, log zerolog.Logger) *CtrlCon {
 	quitCh := make(chan struct{}, 1)
 	return &CtrlCon{
 		ses:    ses,
+		cfg:    cfg,
 		conn:   conn,
 		proto:  textproto.NewConn(conn),
 		log:    log,
 		quitCh: quitCh,
 		quitFn: sync.OnceFunc(func() { close(quitCh) }),
 	}
+}
+
+func (cc *CtrlCon) Session() ISession {
+	return cc.ses
+}
+
+func (cc *CtrlCon) Config() Config {
+	return cc.cfg
 }
 
 // WithTLS sets TLS configuration for the session.
@@ -103,7 +115,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 	cc.log.Debug().Msg("cc.listen: started")
 	close(started)
 
-	if err := cc.writeLine(cc.ses.cfg.svrReadyMsg); err != nil {
+	if err := cc.WriteLine(cc.cfg.svrReadyMsg); err != nil {
 		LogError(nil, cc.log, err, nil)
 	}
 
@@ -115,7 +127,7 @@ func (cc *CtrlCon) listen(started chan struct{}) {
 		default:
 		}
 
-		_ = cc.conn.SetReadDeadline(time.Now().Add(cc.ses.cfg.readTO))
+		_ = cc.conn.SetReadDeadline(time.Now().Add(cc.cfg.readTO))
 		line, err := cc.proto.ReadLine()
 		if err != nil {
 			var e *net.OpError
@@ -166,15 +178,15 @@ func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 	if cmdNext != "" && cmd != ftpcmd.QUIT {
 		cc.cmdNext = ""
 		if cmd != cmdNext {
-			LogError(nil, cc.log, cc.writeLine(ErrorCmdSeq), nil)
+			LogError(nil, cc.log, cc.WriteLine(ErrorCmdSeq), nil)
 			return nil
 		}
 	}
 
 	// Commands may be implemented but not turned on.
-	if !cc.ses.cfg.HasFeature(cmd) {
+	if !cc.cfg.HasFeature(cmd) {
 		cc.cmdPrev = cmd
-		return cc.writeLine(ErrorUnkCmd, cmd)
+		return cc.WriteLine(ErrorUnkCmd, cmd)
 	}
 
 	var err error
@@ -182,21 +194,21 @@ func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 		err = hdl.Handle(cc, args...)
 		cc.cmdPrev = cmd
 	} else {
-		err = cc.writeLine(ErrorUnkCmd, cmd)
+		err = cc.WriteLine(ErrorUnkCmd, cmd)
 	}
 	return err
 }
 
-// writeLine formats and writes the given arguments to the [textproto.Writer]
+// WriteLine formats and writes the given arguments to the [textproto.Writer]
 // using the specified format string.
-func (cc *CtrlCon) writeLine(resp Response, args ...any) error {
+func (cc *CtrlCon) WriteLine(resp Response, args ...any) error {
 	msg := resp.With(args...)
 	if msg == "" {
 		cc.log.Debug().Msg(">")
 		return nil
 	}
 
-	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.cfg.writeTO))
 	if err := cc.proto.PrintfLine("%s", msg); err != nil {
 		return fmt.Errorf("cc.write_line fail: %w; msg: %s", err, msg)
 	}
@@ -212,7 +224,7 @@ func (cc *CtrlCon) close() error {
 	if !cc.listening {
 		return nil
 	}
-	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.ses.cfg.writeTO))
+	_ = cc.conn.SetWriteDeadline(time.Now().Add(cc.cfg.writeTO))
 	meta := map[string]any{"action": "cc.close"}
 	LogError(nil, cc.log, cc.proto.Close(), meta)
 	cc.log.Debug().Msgf("cc.close")

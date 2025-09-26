@@ -110,10 +110,10 @@ func (tst *Tester) Config(opts ...ftpsrv.Option) ftpsrv.Config {
 }
 
 // Session returns [ftpsrv.Session] instance with values reflecting the tester.
-func (tst *Tester) Session(opts ...ftpsrv.Option) *ftpsrv.Session {
+func (tst *Tester) Session() *ftpsrv.Session {
 	tst.t.Helper()
 	return ftpsrv.NewSession(
-		tst.Config(opts...),
+		tst.clk(),
 		tst.srvCC.LocalAddr(),
 		tst.srvCC.RemoteAddr(),
 	)
