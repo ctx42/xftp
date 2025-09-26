@@ -190,7 +190,7 @@ func (cc *CtrlCon) handleCommand(cmd string, args ...string) error {
 	}
 
 	var err error
-	if hdl, ok := handlers[cmd]; ok {
+	if hdl, ok := cc.cfg.features[cmd]; ok {
 		err = hdl.Handle(cc, args...)
 		cc.cmdPrev = cmd
 	} else {

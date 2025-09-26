@@ -95,7 +95,7 @@ type Config struct {
 	key  []byte // Certificate key PEM block.
 
 	// List of available FTP commands.
-	features map[string]struct{}
+	features map[string]Command
 }
 
 // NewConfig returns default FTP server configuration options.
@@ -107,11 +107,11 @@ func NewConfig(opts ...Option) Config {
 		writeTO:     50 * time.Millisecond,
 		clock:       func() time.Time { return time.Now().UTC() },
 		svrReadyMsg: ServerReady,
-		features:    make(map[string]struct{}, 20),
+		features:    make(map[string]Command, 20),
 	}
 	// Get all implemented commands.
-	for name := range handlers {
-		cfg.features[name] = struct{}{}
+	for _, cmd := range commands {
+		cfg.features[cmd.Name()] = cmd
 	}
 	for _, opt := range opts {
 		cfg = opt(cfg)
@@ -135,19 +135,20 @@ func (cfg Config) HasFeature(feat string) bool {
 	return ok
 }
 
-// EnableFeature enables given FTP command(s).
-func (cfg Config) EnableFeature(commands ...string) Config {
-	cfg.features = maps.Clone(cfg.features)
-	for _, cmd := range commands {
-		cfg.features[cmd] = struct{}{}
-	}
-	return cfg
-}
+// TODO(rz):
+// // EnableFeature enables given FTP command(s).
+// func (cfg Config) EnableFeature(commands ...string) Config {
+// 	cfg.features = maps.Clone(cfg.features)
+// 	for _, cmd := range commands {
+// 		cfg.features[cmd] = struct{}{}
+// 	}
+// 	return cfg
+// }
 
 // DisableFeature disables the given FTP command.
-func (cfg Config) DisableFeature(command string) Config {
+func (cfg Config) DisableFeature(name string) Config {
 	cfg.features = maps.Clone(cfg.features)
-	delete(cfg.features, command)
+	delete(cfg.features, name)
 	return cfg
 }
 
