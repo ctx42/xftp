@@ -75,13 +75,7 @@ func NewCtrlCon(ses *Session, cfg Config, conn net.Conn, log zerolog.Logger) *Ct
 	}
 }
 
-func (cc *CtrlCon) Session() ISession {
-	return cc.ses
-}
-
-func (cc *CtrlCon) Config() Config {
-	return cc.cfg
-}
+func (cc *CtrlCon) Config() Config { return cc.cfg }
 
 func (cc *CtrlCon) RegisterCommand(cmd Command) {
 	cc.cfg.features[cmd.Name()] = cmd

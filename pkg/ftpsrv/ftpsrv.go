@@ -1,9 +1,5 @@
 package ftpsrv
 
-import (
-	"github.com/gofrs/uuid/v5"
-)
-
 // Flags represent an FTP command metadata bits.
 type Flags uint32
 
@@ -26,14 +22,7 @@ type Command interface {
 	Handle(cc ControlConn, args ...string) error
 }
 
-// ISession represents an FTP session.
-type ISession interface {
-	// ID returns unique UUIDv7 FTP Session ID.
-	ID() uuid.UUID
-}
-
 type ControlConn interface {
 	WriteLine(rsp Response, args ...any) error
-	Session() ISession
 	Config() Config
 }

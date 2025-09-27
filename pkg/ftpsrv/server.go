@@ -14,7 +14,6 @@ type Server struct {
 	cfg    Config       // FTP server configuration.
 	tlsCfg *tls.Config  // TLS configuration.
 	lnr    net.Listener // FTP server lnr.
-	cxl    func()
 	log    zerolog.Logger
 }
 
@@ -54,10 +53,10 @@ func (srv *Server) ListenAndServe(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return srv.Serve(ctx, srv.lnr)
+	return srv.Serve(srv.lnr)
 }
 
-func (srv *Server) Serve(ctx context.Context, lnr net.Listener) error {
+func (srv *Server) Serve(lnr net.Listener) error {
 	srv.lnr = lnr
 	for {
 		conn, err := srv.lnr.Accept()
@@ -76,5 +75,6 @@ func (srv *Server) handleAcceptError(err error) error {
 
 // Close closes the FTP server.
 func (srv *Server) Close() error {
+	// TODO(rz):
 	return nil
 }
