@@ -82,6 +82,39 @@ func Test_WithReadyMsg(t *testing.T) {
 	assert.Equal(t, custom, have.svrReadyMsg)
 }
 
+func Test_WithReadTimeout(t *testing.T) {
+	// --- Given ---
+	cfg := Config{}
+
+	// --- When ---
+	have := WithReadTimeout(time.Second)(cfg)
+
+	// --- Then ---
+	assert.Equal(t, time.Second, have.readTO)
+}
+
+func Test_WithWriteTimeout(t *testing.T) {
+	// --- Given ---
+	cfg := Config{}
+
+	// --- When ---
+	have := WithWriteTimeout(time.Second)(cfg)
+
+	// --- Then ---
+	assert.Equal(t, time.Second, have.writeTO)
+}
+
+func Test_WithoutFeature(t *testing.T) {
+	// --- Given ---
+	cfg := Config{features: map[string]Command{"XXXX": nil}}
+
+	// --- When ---
+	have := WithoutFeature("XXXX")(cfg)
+
+	// --- Then ---
+	assert.Len(t, 0, have.features)
+}
+
 func Test_NewConfig(t *testing.T) {
 	t.Run("no options", func(t *testing.T) {
 		// --- When ---
@@ -114,7 +147,7 @@ func Test_NewConfig(t *testing.T) {
 
 func Test_Config_Features(t *testing.T) {
 	// --- Given ---
-	cfg := NewConfig()
+	cfg := Config{features: map[string]Command{ftpcmd.NOOP: nil}}
 
 	// --- When ---
 	have := cfg.Features()
@@ -122,4 +155,73 @@ func Test_Config_Features(t *testing.T) {
 	// --- Then ---
 	want := []string{ftpcmd.NOOP}
 	assert.Equal(t, want, have)
+}
+
+func Test_Config_HasFeature(t *testing.T) {
+	t.Run("existing", func(t *testing.T) {
+		// --- Given ---
+		cfg := Config{features: map[string]Command{ftpcmd.NOOP: nil}}
+
+		// --- When ---
+		have := cfg.HasFeature(ftpcmd.NOOP)
+
+		// --- Then ---
+		assert.True(t, have)
+	})
+
+	t.Run("not existing", func(t *testing.T) {
+		// --- Given ---
+		cfg := Config{features: map[string]Command{ftpcmd.NOOP: nil}}
+
+		// --- When ---
+		have := cfg.HasFeature("XXXX")
+
+		// --- Then ---
+		assert.False(t, have)
+	})
+}
+
+func Test_Config_DisableFeature(t *testing.T) {
+	t.Run("existing", func(t *testing.T) {
+		// --- Given ---
+		cfg := Config{features: map[string]Command{ftpcmd.NOOP: nil}}
+
+		// --- When ---
+		have := cfg.DisableFeature(ftpcmd.NOOP)
+
+		// --- Then ---
+		assert.HasKey(t, ftpcmd.NOOP, cfg.features)
+		assert.HasNoKey(t, ftpcmd.NOOP, have.features)
+	})
+
+	t.Run("not existing", func(t *testing.T) {
+		// --- Given ---
+		cfg := Config{features: map[string]Command{ftpcmd.NOOP: nil}}
+
+		// --- When ---
+		have := cfg.DisableFeature("XXXX")
+
+		// --- Then ---
+		assert.HasKey(t, ftpcmd.NOOP, cfg.features)
+		assert.HasKey(t, ftpcmd.NOOP, have.features)
+	})
+}
+
+func Test_Config_DisableAllFeatures(t *testing.T) {
+	t.Run("existing", func(t *testing.T) {
+		// --- Given ---
+		cfg := Config{
+			features: map[string]Command{
+				ftpcmd.NOOP: nil,
+				"XXXX":      nil,
+			},
+		}
+
+		// --- When ---
+		have := cfg.DisableAllFeatures()
+
+		// --- Then ---
+		assert.Len(t, 2, cfg.features)
+		assert.Len(t, 0, have.features)
+	})
 }

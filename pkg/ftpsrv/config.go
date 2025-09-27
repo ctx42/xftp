@@ -58,18 +58,16 @@ func WithReadyMsg(rsp Response) Option {
 	}
 }
 
+// WithReadTimeout is the [NewConfig] option setting connection read timeout.
 func WithReadTimeout(timeout time.Duration) Option {
-	// TODO(rz): document this.
-	// TODO(rz): test this.
 	return func(cfg Config) Config {
 		cfg.readTO = timeout
 		return cfg
 	}
 }
 
+// WithWriteTimeout is the [NewConfig] option setting connection write timeout.
 func WithWriteTimeout(timeout time.Duration) Option {
-	// TODO(rz): document this.
-	// TODO(rz): test this.
 	return func(cfg Config) Config {
 		cfg.writeTO = timeout
 		return cfg
@@ -135,16 +133,6 @@ func (cfg Config) HasFeature(feat string) bool {
 	_, ok := cfg.features[feat]
 	return ok
 }
-
-// TODO(rz):
-// // EnableFeature enables given FTP command(s).
-// func (cfg Config) EnableFeature(commands ...string) Config {
-// 	cfg.features = maps.Clone(cfg.features)
-// 	for _, cmd := range commands {
-// 		cfg.features[cmd] = struct{}{}
-// 	}
-// 	return cfg
-// }
 
 // DisableFeature disables the given FTP command.
 func (cfg Config) DisableFeature(name string) Config {
