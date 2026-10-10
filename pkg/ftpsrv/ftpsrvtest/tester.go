@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/ctx42/logkit/pkg/logkit"
-	"github.com/ctx42/testing/pkg/kit/timekit"
 	"github.com/ctx42/testing/pkg/notice"
 	"github.com/ctx42/testing/pkg/tester"
+	"github.com/ctx42/testkit/pkg/timekit"
 	"github.com/rs/zerolog"
 
 	"github.com/ctx42/xftp/pkg/ftpsrv"
